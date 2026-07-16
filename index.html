@@ -17,6 +17,63 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import {
+    getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
+    signOut, onAuthStateChanged, sendPasswordResetEmail
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import {
+    getFirestore, doc, setDoc, onSnapshot, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  // ==== isi config Firebase punya lu sendiri di sini (lihat README) ====
+  const FIREBASE_CONFIG = {
+    apiKey: "PASTE-API-KEY-DI-SINI",
+    authDomain: "PASTE-AUTH-DOMAIN-DI-SINI",
+    projectId: "PASTE-PROJECT-ID-DI-SINI",
+    storageBucket: "PASTE-STORAGE-BUCKET-DI-SINI",
+    messagingSenderId: "PASTE-SENDER-ID-DI-SINI",
+    appId: "PASTE-FIREBASE-APP-ID-DI-SINI",
+  };
+  const firebaseConfigured = FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.startsWith("PASTE-");
+  window.firebaseConfigured = firebaseConfigured;
+  if (!firebaseConfigured) { window.CatetinCloud = null; }
+  else {
+    const app = initializeApp(FIREBASE_CONFIG);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    let unsubscribeSnapshot = null;
+    let suppressUntil = 0;
+
+    window.CatetinCloud = {
+      async signUp(email, password) {
+        const cred = await createUserWithEmailAndPassword(auth, email, password);
+        return cred.user;
+      },
+      async signIn(email, password) {
+        const cred = await signInWithEmailAndPassword(auth, email, password);
+        return cred.user;
+      },
+      async resetPassword(email) { await sendPasswordResetEmail(auth, email); },
+      async signOutUser() { await signOut(auth); },
+      onAuthChange(cb) { onAuthStateChanged(auth, cb); },
+      async saveData(uid, data) {
+        suppressUntil = Date.now() + 4000;
+        await setDoc(doc(db, "catetin_users", uid), { ...data, updatedAt: serverTimestamp() }, { merge: true });
+      },
+      subscribeData(uid, cb) {
+        if (unsubscribeSnapshot) unsubscribeSnapshot();
+        unsubscribeSnapshot = onSnapshot(doc(db, "catetin_users", uid), (snap) => {
+          if (Date.now() < suppressUntil) return;
+          if (snap.exists()) cb(snap.data());
+        });
+      },
+      stopSync() { if (unsubscribeSnapshot) { unsubscribeSnapshot(); unsubscribeSnapshot = null; } },
+    };
+    window.dispatchEvent(new Event("catetincloud-ready"));
+  }
+</script>
 <style>
   :root {
     --bg: #0B0F0D;
@@ -262,34 +319,4 @@
   .sheet-handle { width: 36px; height: 4px; background: var(--stroke); border-radius: 999px; margin: 10px auto 16px; }
   .sheet-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
   .sheet-head h2 { font-size: 18px; margin: 0; font-weight: 600; }
-  .sheet-close { background: var(--card); border: none; width: 30px; height: 30px; border-radius: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--muted); }
-
-  .amount-input-row { display: flex; align-items: baseline; gap: 6px; padding: 10px 2px 18px; border-bottom: 1px solid var(--stroke); margin-bottom: 16px; }
-  .amount-input-row span { font-family: 'Space Grotesk', sans-serif; color: var(--muted); font-size: 22px; font-weight: 600; }
-  .amount-input-row input { flex: 1; border: none; outline: none; background: transparent; font-family: 'Space Grotesk', sans-serif; font-size: 32px; font-weight: 700; color: var(--ink); min-width: 0; }
-  .amount-input-row input::placeholder { color: var(--faint); }
-
-  .quick-chips { display: flex; gap: 8px; overflow-x: auto; margin-bottom: 18px; padding-bottom: 2px; }
-  .chip {
-    flex-shrink: 0; background: var(--card); border: 1px solid var(--stroke); color: var(--ink); font-family: 'JetBrains Mono', monospace;
-    font-size: 12.5px; font-weight: 500; padding: 8px 14px; border-radius: 12px; cursor: pointer;
-  }
-  .chip:active { background: var(--card-2); }
-
-  .field-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-bottom: 10px; display: block; }
-  .cat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 18px; }
-  .cat-btn {
-    display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 4px; border-radius: 16px;
-    border: 1.5px solid var(--stroke); background: var(--card); cursor: pointer;
-  }
-  .cat-btn .ic { width: 34px; height: 34px; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-size: 15px; }
-  .cat-btn .ic svg { width: 17px; height: 17px; }
-  .cat-btn span.lbl { font-size: 9.5px; color: var(--muted); text-align: center; line-height: 1.2; }
-  .cat-btn.active { border-color: var(--mint); background: rgba(43,226,143,0.08); }
-  .cat-btn.active span.lbl { color: var(--ink); font-weight: 600; }
-  .cat-btn.add-cat { border-style: dashed; color: var(--muted); }
-
-  .rokok-calc { background: var(--card); border: 1px solid var(--stroke); border-radius: 14px; padding: 12px 14px; margin-bottom: 18px; }
-  .rokok-calc .row-between { margin-bottom: 8px; }
-  .rokok-calc .lbl { font-size: 12px; color: var(--muted); }
-  .rokok-calc-inputs { display: flex; align-items: center; gap: 8p
+  .sh
