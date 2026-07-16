@@ -1,0 +1,33 @@
+{
+  "name": "Catetin - Pencatat Pengeluaran Harian",
+  "short_name": "Catetin",
+  "description": "Catat pengeluaran harian, lacak kebiasaan (termasuk rokok & ngopi), atur budget, dan pantau progress berhenti merokok.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0B0F0D",
+  "theme_color": "#0B0F0D",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Catat pengeluaran",
+      "short_name": "Catat",
+      "url": "./index.html?action=add",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
